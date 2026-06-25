@@ -1,0 +1,6 @@
+#!/home/kirmaada/Projects/EXL/pdf_mismatch/venv/bin/python3.12
+import sys
+from prov.scripts.compare import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())

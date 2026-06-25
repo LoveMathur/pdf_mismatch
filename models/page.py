@@ -1,9 +1,16 @@
 from pydantic import BaseModel
+
 from typing import List
-from .word import Word
+
+from .text_block import TextBlock
+
 
 class Page(BaseModel):
 
-    page_number: int
+    number: int
 
-    words: List[Word]
+    width: float
+
+    height: float
+
+    blocks: List[TextBlock]

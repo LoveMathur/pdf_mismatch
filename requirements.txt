@@ -2,7 +2,7 @@
 reportlab==4.2.2
 pillow==10.4.0
 
-# Document AI & OCR (For future pipeline steps)
+rapidfuzz==3.14.5       # For fuzzy string matching
 pymupdf==1.24.5        # For extracting digital text and metadata
 pytesseract==0.3.13    # Open-source OCR engine for scanned text
 easyocr==1.7.1         # Alternative deep-learning based OCR

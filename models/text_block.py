@@ -16,8 +16,7 @@ class TextBlock(BaseModel):
     @computed_field
     @property
     def text(self) -> str:
-
         return "\n".join(
-            " ".join(span.text for span in line.spans)
+            line.text.rstrip()
             for line in self.lines
         )

@@ -1,7 +1,12 @@
+from extractors.word_extractor import WordExtractor
 from extractors.digital import DigitalPDFExtractor
 
 from utils.flattener import DocumentFlattener
 from utils.sequence_alignment import SequenceAligner
+
+from builders.annotation_builder import AnnotationBuilder
+
+from renderer.pdf_renderer import PDFRenderer
 
 from comparators.insertion_deletion import InsertionDeletionComparator
 from comparators.replace import ReplaceComparator
@@ -38,6 +43,17 @@ for comparator in comparators:
         comparator.compare(pairs)
 
     )
+    # ------------------------------------------------------------------
+    # Build annotations
+    # ------------------------------------------------------------------
+
+    annotation_builder = AnnotationBuilder()
+
+
+    annotations = annotation_builder.build(
+        differences=differences,
+        aligned_pairs=pairs,
+    )
 
 print("=" * 80)
 print(f"Total Differences: {len(differences)}")
@@ -58,3 +74,21 @@ for diff in differences:
     print("Metadata : ", diff.metadata)
 
     print("Confidence:", diff.confidence)
+
+    # ------------------------------------------------------------------
+    # Render annotated PDF
+    # ------------------------------------------------------------------
+
+renderer = PDFRenderer()
+
+renderer.render(
+
+    input_pdf="data/document_D.pdf",
+
+    output_pdf="output/annotated_document_D.pdf",
+
+    annotations=annotations,
+
+    )
+print("Annotated PDF saved to:")
+print("output/annotated_document_D.pdf")

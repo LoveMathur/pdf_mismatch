@@ -1,14 +1,20 @@
 from abc import ABC, abstractmethod
 
-from models.aligned_pair import AlignedPair
 from models.difference import Difference
+from models.logical_aligned_pair import LogicalAlignedPair
 
 
-class BaseComparator(ABC):
+class Comparator(ABC):
+    """
+    Base class for all comparison modules.
+    """
 
     @abstractmethod
     def compare(
         self,
-        pairs: list[AlignedPair]
+        pair: LogicalAlignedPair,
     ) -> list[Difference]:
-        ...
+        """
+        Compare one aligned pair and return the detected differences.
+        """
+        raise NotImplementedError

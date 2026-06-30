@@ -3,42 +3,70 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from models.logical_line import LogicalLine
+from models.logical_word import LogicalWord
 
-class DifferenceType(str, Enum):
 
-    CHARACTER = "character"
-
-    WORD = "word"
-
+class DifferenceCategory(str, Enum):
     INSERTION = "insertion"
-
     DELETION = "deletion"
-
-    CASE = "case"
-
-    WHITESPACE = "whitespace"
-
-    SPELLING = "spelling"
-
+    CHARACTER = "character"
+    WORD = "word"
+    NUMBER = "number"
     FORMATTING = "formatting"
-
+    ORDER = "order"
     IMAGE = "image"
 
-    OCR = "ocr"
 
-    NUMBER = "number"
+class Severity(str, Enum):
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
 
 
 class Difference(BaseModel):
+    """
+    Represents one detected difference between two documents.
 
-    pair_index: int
+    This object is the primary output of the comparison engine.
+    It contains both the semantic information (what changed)
+    and the localization information (where it changed).
+    """
 
-    difference_type: DifferenceType
+    # -------------------------------------------------------
+    # Classification
+    # -------------------------------------------------------
 
-    expected: str | None = None
+    category: DifferenceCategory
 
-    actual: str | None = None
+    severity: Severity = Severity.WARNING
 
     confidence: float = 1.0
+
+    # -------------------------------------------------------
+    # Context
+    # -------------------------------------------------------
+
+    expected_line: LogicalLine | None = None
+
+    actual_line: LogicalLine | None = None
+
+    expected_word: LogicalWord | None = None
+
+    actual_word: LogicalWord | None = None
+
+    # -------------------------------------------------------
+    # Human-readable values
+    # -------------------------------------------------------
+
+    expected_text: str | None = None
+
+    actual_text: str | None = None
+
+    description: str = ""
+
+    # -------------------------------------------------------
+    # Extra information
+    # -------------------------------------------------------
 
     metadata: dict[str, Any] = Field(default_factory=dict)

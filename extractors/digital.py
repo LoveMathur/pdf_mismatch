@@ -36,22 +36,27 @@ class DigitalPDFExtractor:
 
             for block in page_dict["blocks"]:
 
-                # Ignore images for now.
-                # Phase 3 will handle image extraction.
+                # Ignore non-text blocks for now.
                 if block["type"] != 0:
                     continue
 
                 lines = []
 
-                for line in block.get("lines", []):
+                for line_index, line in enumerate(block.get("lines", [])):
 
                     spans = []
 
+                    line_text_parts = []
+
                     for span in line.get("spans", []):
+
+                        text = span.get("text", "")
+
+                        line_text_parts.append(text)
 
                         spans.append(
                             Span(
-                                text=span.get("text", ""),
+                                text=text,
                                 font=span.get("font", ""),
                                 size=float(span.get("size", 0)),
                                 color=int(span.get("color", 0)),
@@ -59,10 +64,23 @@ class DigitalPDFExtractor:
                             )
                         )
 
+                    line_bbox = tuple(line.get("bbox", (0, 0, 0, 0)))
+                    line_text = "".join(line_text_parts)
+
+                    # -----------------------------
+                    # DEBUG OUTPUT
+                    # -----------------------------
+                    print("=" * 80)
+                    print(f"PAGE : {page_number}")
+                    print(f"BLOCK: {block_number}")
+                    print(f"LINE : {line_index}")
+                    print(f"TEXT : {repr(line_text)}")
+                    print(f"BBOX : {line_bbox}")
+
                     lines.append(
                         Line(
-                            bbox=tuple(line.get("bbox", (0, 0, 0, 0))),
-                            spans=spans
+                            bbox=line_bbox,
+                            spans=spans,
                         )
                     )
 

@@ -1,40 +1,42 @@
-from models.aligned_pair import AlignmentType, AlignedPair
-from models.difference import Difference, DifferenceType
+from comparators.base import Comparator
+from models.difference import Difference, DifferenceCategory, Severity
+from models.logical_aligned_pair import AlignmentType, LogicalAlignedPair
 
-from comparators.base import BaseComparator
 
-
-class InsertionDeletionComparator(BaseComparator):
+class InsertionDeletionComparator(Comparator):
+    """
+    Identifies inserted and deleted lines between two documents.
+    """
 
     def compare(
         self,
-        pairs: list[AlignedPair]
+        pair: LogicalAlignedPair,
     ) -> list[Difference]:
 
-        differences: list[Difference] = []
-
-        for pair in pairs:
-
-            if pair.alignment_type == AlignmentType.INSERT:
-
-                differences.append(
-                    Difference(
-                        pair_index=pair.index,
-                        difference_type=DifferenceType.INSERTION,
-                        expected=None,
-                        actual=pair.right.text,
-                    )
+        if pair.alignment == AlignmentType.INSERT:
+            if pair.right is None:
+                return []
+            return [
+                Difference(
+                    category=DifferenceCategory.INSERTION,
+                    severity=Severity.WARNING,
+                    actual_line=pair.right,
+                    actual_text=pair.right.text,
+                    description=f"Line was inserted: '{pair.right.text}'",
                 )
+            ]
 
-            elif pair.alignment_type == AlignmentType.DELETE:
-
-                differences.append(
-                    Difference(
-                        pair_index=pair.index,
-                        difference_type=DifferenceType.DELETION,
-                        expected=pair.left.text,
-                        actual=None,
-                    )
+        elif pair.alignment == AlignmentType.DELETE:
+            if pair.left is None:
+                return []
+            return [
+                Difference(
+                    category=DifferenceCategory.DELETION,
+                    severity=Severity.ERROR,
+                    expected_line=pair.left,
+                    expected_text=pair.left.text,
+                    description=f"Line was deleted: '{pair.left.text}'",
                 )
+            ]
 
-        return differences
+        return []

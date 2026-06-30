@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Template Validation Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <!-- Background glow grids for futuristic look -->
+    <div class="glow-bg-grid">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="main-header glass-panel">
+            <div class="header-logo">
+                <i class="fa-solid fa-file-contract logo-icon"></i>
+                <div class="logo-text">
+                    <h1>Drishtikon</h1>
+                    <span>PDF Template Validation Engine</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="reset-btn" class="btn btn-secondary" style="display: none;">
+                    <i class="fa-solid fa-arrow-rotate-left"></i> Compare New
+                </button>
+                <a id="download-btn" class="btn btn-primary" href="#" style="display: none;" download>
+                    <i class="fa-solid fa-download"></i> Download Annotated PDF
+                </a>
+            </div>
+        </header>
+
+        <!-- Upload View -->
+        <main id="upload-view" class="view-section">
+            <div class="upload-hero">
+                <h2>Intelligent Document Comparison</h2>
+                <p>Upload a Reference (Expected) template and a Generated (Actual) PDF to analyze and highlight structural, textual, and formatting mismatches.</p>
+            </div>
+            
+            <form id="upload-form" class="upload-grid">
+                <!-- Reference Upload -->
+                <div class="upload-card glass-panel drag-zone" id="expected-drag-zone">
+                    <input type="file" id="expected_pdf" name="expected_pdf" accept="application/pdf" class="file-input" required>
+                    <div class="upload-content">
+                        <div class="icon-wrapper ref-icon">
+                            <i class="fa-solid fa-file-shield"></i>
+                        </div>
+                        <h3>Reference Document</h3>
+                        <p class="upload-label">Drag & drop your expected template PDF here, or <span>browse files</span></p>
+                        <p class="file-spec">Supports PDF up to 20MB</p>
+                        <div class="file-preview-info" style="display: none;">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span class="file-name"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actual Upload -->
+                <div class="upload-card glass-panel drag-zone" id="actual-drag-zone">
+                    <input type="file" id="actual_pdf" name="actual_pdf" accept="application/pdf" class="file-input" required>
+                    <div class="upload-content">
+                        <div class="icon-wrapper act-icon">
+                            <i class="fa-solid fa-file-signature"></i>
+                        </div>
+                        <h3>Generated Document</h3>
+                        <p class="upload-label">Drag & drop your actual generated PDF here, or <span>browse files</span></p>
+                        <p class="file-spec">Supports PDF up to 20MB</p>
+                        <div class="file-preview-info" style="display: none;">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span class="file-name"></span>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="action-bar">
+                <button type="button" id="analyze-btn" class="btn btn-large btn-primary" disabled>
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Run Intelligent Analysis
+                </button>
+            </div>
+        </main>
+
+        <!-- Loading View -->
+        <div id="loading-view" class="view-section glass-panel" style="display: none;">
+            <div class="spinner-container">
+                <div class="pulse-ring"></div>
+                <div class="spinner">
+                    <i class="fa-solid fa-file-pdf spinner-icon"></i>
+                </div>
+            </div>
+            <h2>Analyzing Templates & Content</h2>
+            <div class="loading-steps">
+                <div class="step-item active" id="step-extract">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                    <span>Extracting document metadata & text layout...</span>
+                </div>
+                <div class="step-item" id="step-align">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                    <span>Aligning template structure...</span>
+                </div>
+                <div class="step-item" id="step-compare">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                    <span>Detecting character, word, and spelling differences...</span>
+                </div>
+                <div class="step-item" id="step-render">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                    <span>Generating visual markup...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <main id="dashboard-view" class="view-section" style="display: none;">
+            <div class="dashboard-grid">
+                
+                <!-- Sidebar: Mismatch List -->
+                <section class="sidebar glass-panel">
+                    <div class="sidebar-header">
+                        <h3>Mismatches Detected</h3>
+                        <span class="mismatch-badge" id="mismatch-count">0</span>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="filter-bar">
+                        <button class="filter-pill active" data-filter="all">All</button>
+                        <button class="filter-pill" data-filter="error"><i class="fa-solid fa-triangle-exclamation"></i> Errors</button>
+                        <button class="filter-pill" data-filter="warning"><i class="fa-solid fa-circle-exclamation"></i> Warnings</button>
+                        <button class="filter-pill" data-filter="info"><i class="fa-solid fa-circle-info"></i> Info</button>
+                    </div>
+
+                    <!-- Mismatches List -->
+                    <div class="mismatches-list" id="mismatches-list-container">
+                        <!-- Dynamic content -->
+                    </div>
+                </section>
+
+                <!-- PDF Viewer Area (Side-by-Side Pages) -->
+                <section class="workspace glass-panel">
+                    <!-- Workspace Header & Page Controls -->
+                    <div class="workspace-header">
+                        <div class="page-controls">
+                            <button id="prev-page" class="btn btn-icon btn-secondary" title="Previous Page">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <span class="page-display">Page <span id="current-page-num">1</span> of <span id="total-pages-num">1</span></span>
+                            <button id="next-page" class="btn btn-icon btn-secondary" title="Next Page">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <div class="view-modes">
+                            <span class="zoom-level">Scale: Fits Container</span>
+                        </div>
+                    </div>
+
+                    <!-- Viewer Container -->
+                    <div class="viewer-container">
+                        <!-- Left Panel: Reference -->
+                        <div class="document-panel" id="reference-panel">
+                            <div class="panel-title">
+                                <i class="fa-solid fa-file-shield text-primary"></i> Reference (Expected)
+                            </div>
+                            <div class="pdf-page-container" id="left-page-container">
+                                <img id="left-page-img" src="" alt="Reference Page">
+                                <div class="overlay-layer" id="left-overlay-layer"></div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Actual -->
+                        <div class="document-panel" id="actual-panel">
+                            <div class="panel-title">
+                                <i class="fa-solid fa-file-signature text-secondary"></i> Generated (Actual)
+                            </div>
+                            <div class="pdf-page-container" id="right-page-container">
+                                <img id="right-page-img" src="" alt="Actual Page">
+                                <div class="overlay-layer" id="right-overlay-layer"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+            </div>
+        </main>
+    </div>
+
+    <!-- Script -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

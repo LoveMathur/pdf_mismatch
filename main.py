@@ -1,94 +1,93 @@
-from extractors.word_extractor import WordExtractor
-from extractors.digital import DigitalPDFExtractor
+from extractors.unified_extractor import UnifiedExtractor
+from aligners.logical_aligner import LogicalAligner
 
-from utils.flattener import DocumentFlattener
-from utils.sequence_alignment import SequenceAligner
+from comparators.replace import ReplaceComparator
+from comparators.comparison_engine import ComparisonEngine
+from comparators.analyzers.formatting import FormattingComparator
 
-from builders.annotation_builder import AnnotationBuilder
 
 from renderer.pdf_renderer import PDFRenderer
 
-from comparators.insertion_deletion import InsertionDeletionComparator
-from comparators.replace import ReplaceComparator
 
-
-extractor = DigitalPDFExtractor()
-
-left_doc = extractor.extract("data/document_C.pdf")
-right_doc = extractor.extract("data/document_D.pdf")
-
-flattener = DocumentFlattener()
-
-left = flattener.flatten(left_doc)
-right = flattener.flatten(right_doc)
-
-aligner = SequenceAligner()
-
-pairs = aligner.align(left, right)
-
-comparators = [
-
-    InsertionDeletionComparator(),
-
-    ReplaceComparator()
-
-]
-
-differences = []
-
-for comparator in comparators:
-
-    differences.extend(
-
-        comparator.compare(pairs)
-
-    )
-    # ------------------------------------------------------------------
-    # Build annotations
-    # ------------------------------------------------------------------
-
-    annotation_builder = AnnotationBuilder()
-
-
-    annotations = annotation_builder.build(
-        differences=differences,
-        aligned_pairs=pairs,
-    )
-
-print("=" * 80)
-print(f"Total Differences: {len(differences)}")
-print("=" * 80)
-
-for diff in differences:
+def main():
 
     print("=" * 80)
+    print("STEP 1 : Extracting Documents")
+    print("=" * 80)
 
-    print(diff.difference_type.value.upper())
+    extractor = UnifiedExtractor()
+
+    left_document = extractor.extract(
+        "data/document_C.pdf"
+    )
+
+    right_document = extractor.extract(
+        "data/document_D.pdf"
+    )
+
+    print("✓ Documents extracted")
 
     print()
 
-    print("Expected : ", diff.expected)
+    print("=" * 80)
+    print("STEP 2 : Aligning Documents")
+    print("=" * 80)
 
-    print("Actual   : ", diff.actual)
+    aligner = LogicalAligner()
 
-    print("Metadata : ", diff.metadata)
+    aligned_pairs = aligner.align(
+        left_document,
+        right_document,
+    )
 
-    print("Confidence:", diff.confidence)
+    print(f"✓ Total aligned pairs : {len(aligned_pairs)}")
 
-    # ------------------------------------------------------------------
-    # Render annotated PDF
-    # ------------------------------------------------------------------
+    print()
 
-renderer = PDFRenderer()
+    print("=" * 80)
+    print("STEP 3 : Comparing")
+    print("=" * 80)
 
-renderer.render(
+    engine = ComparisonEngine(
 
-    input_pdf="data/document_D.pdf",
+        comparators=[
 
-    output_pdf="output/annotated_document_D.pdf",
+            ReplaceComparator(),
+            FormattingComparator(),
 
-    annotations=annotations,
+        ]
 
     )
-print("Annotated PDF saved to:")
-print("output/annotated_document_D.pdf")
+
+    differences = engine.compare(
+        aligned_pairs
+    )
+
+    print(f"✓ Total differences : {len(differences)}")
+
+    print()
+
+    print("=" * 80)
+    print("STEP 4 : Rendering")
+    print("=" * 80)
+
+    renderer = PDFRenderer()
+
+    renderer.render(
+
+        input_pdf="data/document_D.pdf",
+
+        output_pdf="output/annotated_document_D.pdf",
+
+        differences=differences,
+
+    )
+
+    print()
+
+    print("=" * 80)
+    print("Pipeline completed successfully")
+    print("=" * 80)
+
+if __name__ == "__main__":
+    main()

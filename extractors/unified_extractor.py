@@ -134,7 +134,8 @@ class UnifiedExtractor:
         logical_page: LogicalPage,
     ) -> None:
         """
-        Populate each LogicalLine with its LogicalWords.
+        Populate each LogicalLine with LogicalWords and inherit
+        formatting information from the enclosing span.
         """
 
         line_lookup = {}
@@ -164,27 +165,60 @@ class UnifiedExtractor:
             ) = word
 
             logical_line = line_lookup.get(
-            (
-                block_no,
-                line_no,
-            )
+                (
+                    block_no,
+                    line_no,
+                )
             )
 
             if logical_line is None:
                 continue
 
+            #
+            # Match this word with the span that contains it.
+            #
+
+            matched_span = None
+
+            word_center_x = (x0 + x1) / 2
+            word_center_y = (y0 + y1) / 2
+
+            for span in logical_line.spans:
+
+                sx0, sy0, sx1, sy1 = span.bbox
+
+                if (
+                    sx0 <= word_center_x <= sx1
+                    and
+                    sy0 <= word_center_y <= sy1
+                ):
+                    matched_span = span
+                    break
+
             logical_line.words.append(
 
-            LogicalWord(
-                id=f"{logical_line.id}_word_{word_no}",
+                LogicalWord(
 
-                page=logical_page.page_number,
+                    id=f"{logical_line.id}_word_{word_no}",
 
-                word_index=word_no,
+                    page=logical_page.page_number,
 
-                text=text,
+                    word_index=word_no,
 
-                bbox=(x0, y0, x1, y1),
+                    text=text,
+
+                    bbox=(x0, y0, x1, y1),
+
+                    font=matched_span.font if matched_span else "",
+
+                    font_size=matched_span.size if matched_span else 0.0,
+
+                    color=matched_span.color if matched_span else 0,
+
+                    flags=0,
+
+                    rotation=0.0,
 
                 )
-                )
+
+            )

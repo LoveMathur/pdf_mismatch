@@ -1,20 +1,29 @@
 from abc import ABC, abstractmethod
 
-from models.difference import Difference
+from models.difference_group import DifferenceGroup
 from models.logical_aligned_pair import LogicalAlignedPair
 
 
 class Comparator(ABC):
     """
-    Base class for all comparison modules.
+    Base interface implemented by every comparator.
+
+    Each comparator receives one aligned pair and returns
+    zero or more logical DifferenceGroups.
     """
 
     @abstractmethod
     def compare(
         self,
         pair: LogicalAlignedPair,
-    ) -> list[Difference]:
+    ) -> list[DifferenceGroup]:
         """
-        Compare one aligned pair and return the detected differences.
+        Compare one aligned pair.
+
+        Returns
+        -------
+        list[DifferenceGroup]
+            Zero or more logical groups describing the
+            differences found in this aligned pair.
         """
         raise NotImplementedError

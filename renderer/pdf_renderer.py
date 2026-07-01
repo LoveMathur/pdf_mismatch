@@ -1,6 +1,7 @@
 import pymupdf
 
 from models.difference import Difference
+from models.difference_group import DifferenceGroup
 
 
 class PDFRenderer:
@@ -12,16 +13,16 @@ class PDFRenderer:
         self,
         input_pdf: str,
         output_pdf: str,
-        differences: list[Difference],
+        groups: list[DifferenceGroup],
     ) -> None:
 
         document = pymupdf.open(input_pdf)
 
-        for difference in differences:
+        for group in groups:
 
             self._render_difference(
                 document,
-                difference,
+                group,
             )
 
         document.save(
@@ -40,29 +41,19 @@ class PDFRenderer:
     def _render_difference(
         self,
         document,
-        difference: Difference,
+        group,
     ):
 
-        target = self._choose_target(
-            difference
-        )
-
-        if target is None:
-            return
-
-        page_number, bbox = target
-
-        page = document[page_number]
+        page = document[group.page - 1]
 
         self._highlight(
             page,
-            bbox,
+            group.bbox,
         )
 
         self._add_comment(
             page,
-            bbox,
-            difference,
+            group,
         )
 
     def _choose_target(
@@ -119,26 +110,22 @@ class PDFRenderer:
     def _add_comment(
         self,
         page,
-        bbox,
-        difference: Difference,
+        group,
     ):
-
-        message = (
-            f"{difference.category}\n\n"
-            f"Expected : {difference.expected_text}\n"
-            f"Actual   : {difference.actual_text}\n\n"
-            f"{difference.description}"
-        )
 
         annot = page.add_text_annot(
 
-            pymupdf.Point(
-                bbox[2] + 5,
-                bbox[1],
-            ),
+        pymupdf.Point(
 
-            message,
+            group.bbox[2] + 5,
 
-        )
+            group.bbox[1],
+
+        ),
+
+        f"{group.title}\n\n{group.message}",
+
+    )
 
         annot.update()
+            

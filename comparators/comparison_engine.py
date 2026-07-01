@@ -1,31 +1,34 @@
-from models.difference import Difference
-from models.logical_aligned_pair import LogicalAlignedPair
-
 from comparators.base import Comparator
+
+from models.difference_group import DifferenceGroup
+from models.logical_aligned_pair import LogicalAlignedPair
 
 
 class ComparisonEngine:
+    """
+    Runs every comparator over every aligned pair.
+    """
 
     def __init__(
         self,
         comparators: list[Comparator],
     ):
-
         self.comparators = comparators
 
     def compare(
         self,
-        pairs: list[LogicalAlignedPair],
-    ) -> list[Difference]:
+        aligned_pairs: list[LogicalAlignedPair],
+    ) -> list[DifferenceGroup]:
 
-        differences = []
+        groups: list[DifferenceGroup] = []
 
-        for pair in pairs:
+        for pair in aligned_pairs:
 
             for comparator in self.comparators:
 
-                differences.extend(
-                    comparator.compare(pair)
-                )
+                result = comparator.compare(pair)
 
-        return differences
+                if result:
+                    groups.extend(result)
+
+        return groups

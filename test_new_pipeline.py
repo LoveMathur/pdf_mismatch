@@ -34,6 +34,9 @@ def main():
         right_doc,
     )
 
+    print(type(pairs))
+    print(type(pairs[0]))
+
     print(f"✓ Total aligned pairs : {len(pairs)}")
 
     print("\n" + "=" * 80)

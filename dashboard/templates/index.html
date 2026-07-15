@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>PDF Mismatch Detection Dashboard</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+
+        <h1>PDF Mismatch Detection Dashboard</h1>
+
+        <p>
+            Enterprise AI-powered PDF Comparison System
+        </p>
+
+    </header>
+
+    <!-- Upload -->
+    <div style="margin-bottom:20px;">
+   
+    </div>
+    <section class="upload-card">
+
+        <div class="upload-box">
+
+            <label>Expected PDF</label>
+
+            <input
+                type="file"
+                id="expected"
+                accept=".pdf">
+
+        </div>
+
+        <div class="upload-box">
+
+            <label>Actual PDF</label>
+
+            <input
+                type="file"
+                id="actual"
+                accept=".pdf">
+
+        </div>
+
+        <button id="compareBtn">
+
+            Compare PDFs
+
+        </button>
+
+    </section>
+
+    <!-- Loading -->
+
+    <div id="loading"
+         class="loading hidden">
+
+        <div class="spinner"></div>
+
+        <h3>Running Comparison Pipeline...</h3>
+
+        <p>
+
+            Extracting → Aligning → Comparing → Rendering
+
+        </p>
+
+    </div>
+
+    <!-- Results -->
+
+    <section id="results"
+             class="hidden">
+
+        <h2>Summary</h2>
+
+        <div class="cards">
+
+            <div class="card">
+
+                <h3>Aligned Pairs</h3>
+
+                <span id="alignedPairs">0</span>
+
+            </div>
+            
+            <div class="card">
+
+                <h3>Total Differences</h3>
+
+                <span id="totalDifferences">0</span>
+
+            </div>
+
+            <div class="card">
+
+                <h3>Formatting</h3>
+
+                <span id="formattingCount">0</span>
+
+            </div>
+
+            <div class="card">
+
+                <h3>Word</h3>
+
+                <span id="wordCount">0</span>
+
+            </div>
+
+            <div class="card">
+
+                <h3>Character</h3>
+
+                <span id="characterCount">0</span>
+
+            </div>
+
+            <div class="card">
+
+                <h3>Number</h3>
+
+                <span id="numberCount">0</span>
+
+            </div>
+
+        </div>
+
+        <h2>Detected Differences</h2>
+
+        <div id="logs"
+             class="logs">
+
+        </div>
+
+        <div class="download">
+
+            <a href="/download"
+               target="_blank">
+
+                Download Annotated PDF
+
+            </a>
+
+        </div>
+
+    </section>
+
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+
+</body>
+
+</html>

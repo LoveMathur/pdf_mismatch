@@ -1,40 +1,100 @@
-from models.aligned_pair import AlignmentType, AlignedPair
-from models.difference import Difference, DifferenceType
+import re
 
-from comparators.base import BaseComparator
+from comparators.base import Comparator
+from comparators.replace import ReplaceComparator
+
+from models.difference import (
+    Difference,
+    DifferenceCategory,
+)
+
+from models.logical_aligned_pair import (
+    AlignmentType,
+    LogicalAlignedPair,
+)
 
 
-class InsertionDeletionComparator(BaseComparator):
+class InsertDeleteComparator(Comparator):
+    """
+    Reports lines that exist in only one of the two documents.
+    """
+
+    MIN_LENGTH = 4
+
+    def __init__(self):
+        self._left_full = ""
+        self._right_full = ""
+
+    def set_context(
+        self,
+        left_full_text: str,
+        right_full_text: str,
+    ) -> None:
+        self._left_full = left_full_text
+        self._right_full = right_full_text
+
+    @staticmethod
+    def _normalize(text: str) -> str:
+        text = text.lower()
+        text = re.sub(r"[^a-z0-9]+", " ", text)
+        return re.sub(r"\s+", " ", text).strip()
 
     def compare(
         self,
-        pairs: list[AlignedPair]
+        pair: LogicalAlignedPair,
     ) -> list[Difference]:
 
-        differences: list[Difference] = []
+        if pair.alignment == AlignmentType.INSERT:
+            line = pair.right
+            other_full = self._left_full
+            category = DifferenceCategory.INSERTION
+        elif pair.alignment == AlignmentType.DELETE:
+            line = pair.left
+            other_full = self._right_full
+            category = DifferenceCategory.DELETION
+        else:
+            return []
 
-        for pair in pairs:
+        if line is None:
+            return []
 
-            if pair.alignment_type == AlignmentType.INSERT:
+        if line.is_header or line.is_footer:
+            return []
 
-                differences.append(
-                    Difference(
-                        pair_index=pair.index,
-                        difference_type=DifferenceType.INSERTION,
-                        expected=None,
-                        actual=pair.right.text,
-                    )
-                )
+        text = line.text.strip()
 
-            elif pair.alignment_type == AlignmentType.DELETE:
+        if len(text) < self.MIN_LENGTH:
+            return []
 
-                differences.append(
-                    Difference(
-                        pair_index=pair.index,
-                        difference_type=DifferenceType.DELETION,
-                        expected=pair.left.text,
-                        actual=None,
-                    )
-                )
+        if re.fullmatch(
+            ReplaceComparator.BULLET_PATTERN, text, re.I
+        ):
+            return []
 
-        return differences
+        if re.fullmatch(r"page\s*\|?\s*\d+(\s+of\s+\d+)?", text, re.I):
+            return []
+
+        normalized = self._normalize(text)
+
+        if normalized and normalized in other_full:
+            return []
+
+        if category == DifferenceCategory.INSERTION:
+            expected_text, actual_text = None, text
+            expected_line, actual_line = None, line
+            description = f"Content inserted: '{text[:80]}'"
+        else:
+            expected_text, actual_text = text, None
+            expected_line, actual_line = line, None
+            description = f"Content removed: '{text[:80]}'"
+
+        return [
+            Difference(
+                category=category,
+                expected_line=expected_line,
+                actual_line=actual_line,
+                expected_text=expected_text,
+                actual_text=actual_text,
+                description=description,
+            )
+        ]

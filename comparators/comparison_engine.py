@@ -36,19 +36,15 @@ class ComparisonEngine:
         r"^name\b",
         r"^name\s+of\b",
         r"^address\b",
-        r"^policy\s*(no|number)\b",
-        r"^certificate\s*(no|number)\b",
         r"^date\s+of\s+birth\b",
         r"^dob\b",
         r"^mobile\b",
         r"^phone\b",
         r"^email\b",
         r"^pan\b",
-        r"^uin\b",
-        r"^agent\b",
-        r"^nominee\b",
-        r"^sum\s+assured\s*:",
-        r"^premium\s+amount\s*:",
+        r"^aadhar\b",
+        r"Date:",
+        r"^Re:\s+Your\s+Policy\s+No. ",
     ]
 
     def __init__(

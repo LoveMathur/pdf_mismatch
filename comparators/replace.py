@@ -22,13 +22,33 @@ class ReplaceComparator(Comparator):
     CHARACTER_DISTANCE = 2
 
     #
-    # Structural / numbering tokens that must never be reported
-    # on their own. Covers:
+    # A pure insert/delete *fragment* inside an otherwise-matched
+    # REPLACE pair (the other side is empty) is reflow spillover --
+    # not a real edit -- when it is this many words or longer AND
+    # already exists verbatim in the other document. Below this
+    # length the check is unsafe: short/common words ("the", "is")
+    # would trivially be "found" anywhere and get wrongly suppressed.
     #
-    #   1)   (a)   (ii)   bullets
-    #   1.   4.4.  9.1.2. dotted decimal numbering
-    #   a.   B.    i.  iv.  x.   letter / roman numbering
-    #
+    MIN_REFLOW_WORDS = 3
+
+    def __init__(self):
+        self._left_full = ""
+        self._right_full = ""
+
+    def set_context(
+        self,
+        left_full_text: str,
+        right_full_text: str,
+    ) -> None:
+        self._left_full = left_full_text
+        self._right_full = right_full_text
+
+    @staticmethod
+    def _normalize_fragment(text: str) -> str:
+        text = text.lower()
+        text = re.sub(r"[^a-z0-9]+", " ", text)
+        return re.sub(r"\s+", " ", text).strip()
+
     BULLET_PATTERN = (
         r"^\d+\)$|"
         r"^\([ivxlcdm]+\)$|"
@@ -50,6 +70,14 @@ class ReplaceComparator(Comparator):
         if pair.left is None or pair.right is None:
             return []
 
+        if (
+            pair.left.is_header
+            or pair.right.is_header
+            or pair.left.is_footer
+            or pair.right.is_footer
+        ):
+            return []
+
         return self._compare_words(
             pair.left,
             pair.right,
@@ -57,12 +85,6 @@ class ReplaceComparator(Comparator):
 
     @staticmethod
     def _normalize_token(text: str) -> str:
-        """
-        Normalize a word token the same way the aligner normalizes
-        line text, so that unicode variants (NBSP, soft hyphen,
-        ligatures, smart quotes vs straight quotes …) do not show
-        up as word differences.
-        """
 
         text = unicodedata.normalize("NFKC", text)
 
@@ -97,7 +119,6 @@ class ReplaceComparator(Comparator):
             self._normalize_token(w.text) for w in right_words
         ]
 
-        # Fast exit
         if left_tokens == right_tokens:
             return []
 
@@ -119,9 +140,6 @@ class ReplaceComparator(Comparator):
             if not expected_text and not actual_text:
                 continue
 
-            # Ignore whitespace-only changes, including missing
-            # or extra spaces between tokens ("9.10.1. If" vs
-            # "9.10.1.If"), which are generator artefacts.
             if (
                 expected_text.replace(" ", "")
                 ==
@@ -129,7 +147,6 @@ class ReplaceComparator(Comparator):
             ):
                 continue
 
-            # Ignore bullets / numbering
             if (
                 re.fullmatch(self.BULLET_PATTERN, expected_text, re.I)
                 or
@@ -137,15 +154,26 @@ class ReplaceComparator(Comparator):
             ):
                 continue
 
+            # Reflow spillover: this line matched its counterpart
+            # overall (that's why it's a REPLACE pair at all), but a
+            # trailing/leading chunk landed on a neighbouring physical
+            # line instead. Such a chunk is a pure insert-or-delete
+            # fragment (the other side is empty) whose words already
+            # exist, verbatim, somewhere in the other document.
+            if not actual_text and expected_text:
+                fragment, other_full = expected_text, self._right_full
+            elif not expected_text and actual_text:
+                fragment, other_full = actual_text, self._left_full
+            else:
+                fragment, other_full = None, None
+
+            if fragment and len(fragment.split()) >= self.MIN_REFLOW_WORDS:
+                normalized_fragment = self._normalize_fragment(fragment)
+                if normalized_fragment and normalized_fragment in other_full:
+                    continue
+
             category = None
 
-            #
-            # Small edits (Levenshtein <= CHARACTER_DISTANCE) are
-            # spelling / character substitutions. They used to be
-            # skipped here "for the CharacterComparator", but no
-            # such comparator is registered in the pipeline, so
-            # they were silently lost. Report them as CHARACTER.
-            #
             if expected_text and actual_text:
 
                 if (
@@ -157,7 +185,6 @@ class ReplaceComparator(Comparator):
                 ):
                     category = DifferenceCategory.CHARACTER
 
-            # Suppress paragraph-reflow explosions
             if (
                 category is None
                 and len(expected_text.split()) > 10

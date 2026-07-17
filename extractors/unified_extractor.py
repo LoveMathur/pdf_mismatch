@@ -1,3 +1,5 @@
+import re
+
 import pymupdf
 
 from models.logical_document import LogicalDocument
@@ -9,14 +11,18 @@ from models.span import Span
 
 class UnifiedExtractor:
 
-    #
-    # Two dict lines are considered part of the same visual row
-    # when their vertical overlap is at least this fraction of
-    # the smaller line height. Used to merge split numbering
-    # ("3.2." + "Moratorium Option") and table cells into one
-    # logical row-line.
-    #
     ROW_OVERLAP_RATIO = 0.6
+
+    #
+    # A line is a header/footer *candidate* when it sits inside the
+    # top/bottom margin band of the page (ratio of page height).
+    # It only becomes header/footer once it also repeats across
+    # pages -- position alone would misclassify one-off content
+    # that happens to start near the page edge.
+    #
+    HEADER_ZONE_RATIO = 0.08
+    FOOTER_ZONE_RATIO = 0.08
+    MIN_BOILERPLATE_REPEATS = 2
 
     def extract(
         self,
@@ -39,12 +45,6 @@ class UnifiedExtractor:
                 logical_page,
             )
 
-            #
-            # Merge fragments that share the same visual row.
-            # This turns "3.2." + "Moratorium Option" into one
-            # line and table cells into one row-line, so the
-            # aligner compares rows against rows.
-            #
             logical_page.lines = self._merge_row_fragments(
                 logical_page.lines
             )
@@ -53,10 +53,79 @@ class UnifiedExtractor:
 
         document.close()
 
+        self._mark_header_footer(pages)
+
         return LogicalDocument(
             file_name=pdf_path,
             pages=pages,
         )
+
+    def _mark_header_footer(
+        self,
+        pages: list[LogicalPage],
+    ) -> None:
+        """
+        Flag recurring top/bottom boilerplate (letterhead, "Page X of Y",
+        confidentiality footers ...) so comparators can ignore it.
+
+        A line only qualifies when it BOTH sits inside the page's
+        margin band AND its (digit-collapsed) text repeats across
+        multiple pages. This is what lets re-pagination -- which
+        changes how many times a footer/header repeats, or what
+        number it shows -- stop being reported as inserted/deleted
+        content.
+        """
+
+        if len(pages) < self.MIN_BOILERPLATE_REPEATS:
+            return
+
+        buckets: dict[tuple, list] = {}
+
+        for page in pages:
+
+            if not page.height:
+                continue
+
+            header_limit = page.height * self.HEADER_ZONE_RATIO
+            footer_limit = page.height * (1 - self.FOOTER_ZONE_RATIO)
+
+            for line in page.lines:
+
+                text = line.text.strip()
+
+                if not text:
+                    continue
+
+                if line.bbox[3] <= header_limit:
+                    zone = "header"
+                elif line.bbox[1] >= footer_limit:
+                    zone = "footer"
+                else:
+                    continue
+
+                key = (zone, self._boilerplate_key(text))
+                buckets.setdefault(key, []).append(line)
+
+        for (zone, _key), lines in buckets.items():
+
+            if len(lines) < self.MIN_BOILERPLATE_REPEATS:
+                continue
+
+            for line in lines:
+                if zone == "header":
+                    line.is_header = True
+                else:
+                    line.is_footer = True
+
+    @staticmethod
+    def _boilerplate_key(text: str) -> str:
+        """
+        Normalize header/footer text for repetition grouping, so
+        "Page 3 of 10" and "Page 4 of 11" are recognised as the same
+        recurring template instead of unrelated one-off lines.
+        """
+        text = re.sub(r"\d+", "#", text.lower())
+        return re.sub(r"\s+", " ", text).strip()
 
     def _extract_page(
         self,
@@ -70,20 +139,10 @@ class UnifiedExtractor:
 
         reading_order = 0
 
-        #
-        # IMPORTANT:
-        #
-        # page.get_text("words") numbers blocks over TEXT blocks
-        # only, while page_dict["blocks"] also contains image
-        # blocks. We therefore keep a separate text-only counter
-        # and use it as block_index, so that _attach_words can
-        # join both views on the same key.
-        #
         text_block_index = -1
 
         for block in page_dict["blocks"]:
 
-            # Ignore images for now
             if block["type"] != 0:
                 continue
 
@@ -143,10 +202,6 @@ class UnifiedExtractor:
         page,
         logical_page: LogicalPage,
     ) -> None:
-        """
-        Populate each LogicalLine with LogicalWords and inherit
-        formatting information from the enclosing span.
-        """
 
         line_lookup = {}
 
@@ -184,13 +239,6 @@ class UnifiedExtractor:
             if logical_line is None:
                 continue
 
-            #
-            # Match this word with the span that overlaps it the
-            # most horizontally. Center-containment fails for
-            # words that straddle two spans or when span boxes
-            # are slightly off; overlap is far more forgiving.
-            #
-
             matched_span = None
             best_overlap = 0.0
 
@@ -204,12 +252,6 @@ class UnifiedExtractor:
                     best_overlap = overlap
                     matched_span = span
 
-            #
-            # Fallback: inherit from the first non-empty span of
-            # the line rather than emitting fake 0.0 / "" values,
-            # which downstream formatting comparison would report
-            # as differences.
-            #
             if matched_span is None:
                 for span in logical_line.spans:
                     if span.text.strip():
@@ -235,23 +277,6 @@ class UnifiedExtractor:
         self,
         lines: list[LogicalLine],
     ) -> list[LogicalLine]:
-        """
-        Merge dict "lines" that live on the same visual row into a
-        single LogicalLine.
-
-        PDF generators frequently split one visual row into several
-        line fragments:
-
-        - list numbering emitted separately from heading text
-        - every table cell emitted as its own line
-        - tab-separated label / value pairs
-
-        Comparing fragments individually is the main source of
-        bullet and table false positives, because the two documents
-        rarely fragment the same row the same way.
-
-        Whitespace-only fragments are dropped entirely.
-        """
 
         candidates = [
             line for line in lines
@@ -261,9 +286,6 @@ class UnifiedExtractor:
         if not candidates:
             return []
 
-        #
-        # Sort by vertical position first, then horizontal.
-        #
         candidates.sort(
             key=lambda l: (round(l.bbox[1], 1), l.bbox[0])
         )
@@ -333,10 +355,6 @@ class UnifiedExtractor:
         row: list[LogicalLine],
         line: LogicalLine,
     ) -> bool:
-        """
-        True when `line` vertically overlaps the current row enough
-        to be considered part of the same visual row.
-        """
 
         row_top = min(f.bbox[1] for f in row)
         row_bottom = max(f.bbox[3] for f in row)

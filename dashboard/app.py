@@ -29,6 +29,7 @@ from comparators.replace import ReplaceComparator
 from comparators.analyzers.formatting import FormattingComparator
 from comparators.insert_delete import InsertDeleteComparator
 from comparators.comparison_engine import ComparisonEngine
+from comparators.media_comparison_engine import MediaComparisonEngine
 
 from renderer.pdf_renderer import PDFRenderer
 
@@ -137,6 +138,20 @@ def compare():
         aligned_pairs
     )
 
+    #
+    # Images / tables have no LogicalAlignedPair to hook into, so
+    # they're compared directly off the two LogicalDocuments and
+    # merged into the same differences list. PDFRenderer already
+    # knows to report these in the dashboard only, never annotate
+    # them on the PDF.
+    #
+    media_engine = MediaComparisonEngine()
+
+    differences += media_engine.compare(
+        left_document,
+        right_document,
+    )
+
     renderer = PDFRenderer()
 
     output_pdf = os.path.join(
@@ -167,11 +182,17 @@ def compare():
 
         counter[diff.category.value] += 1
 
+        line = diff.actual_line or diff.expected_line
+
+        page = diff.metadata.get("page") or (line.page if line else None)
+
         logs.append(
 
             {
 
                 "category": diff.category.value,
+
+                "page": page,
 
                 "expected": diff.expected_text,
 

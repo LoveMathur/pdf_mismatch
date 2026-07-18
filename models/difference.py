@@ -16,6 +16,7 @@ class DifferenceCategory(str, Enum):
     FORMATTING = "formatting"
     ORDER = "order"
     IMAGE = "image"
+    TABLE = "table"
 
 
 class Severity(str, Enum):

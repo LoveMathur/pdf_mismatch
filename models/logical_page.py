@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
 
 from models.logical_line import LogicalLine
+from models.logical_image import LogicalImage
+from models.logical_table import LogicalTable
 
 
 class LogicalPage(BaseModel):
@@ -15,6 +17,10 @@ class LogicalPage(BaseModel):
     height: float
 
     lines: list[LogicalLine] = Field(default_factory=list)
+
+    images: list[LogicalImage] = Field(default_factory=list)
+
+    tables: list[LogicalTable] = Field(default_factory=list)
 
     metadata: dict = Field(default_factory=dict)
 

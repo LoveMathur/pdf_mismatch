@@ -1,6 +1,6 @@
 import pymupdf
 
-from models.difference import Difference
+from models.difference import Difference, DifferenceCategory
 
 
 class PDFRenderer:
@@ -37,11 +37,26 @@ class PDFRenderer:
         print(f"Annotated PDF saved to:\n{output_pdf}")
         print("=" * 80)
 
+    #
+    # Categories that are reported in the dashboard only. Image and
+    # table checks work off page geometry, not a LogicalLine/Word,
+    # so there's no meaningful single spot on the page to highlight
+    # anyway -- and it was explicitly asked that these never get
+    # marked on the rendered PDF.
+    #
+    DASHBOARD_ONLY_CATEGORIES = (
+        DifferenceCategory.IMAGE,
+        DifferenceCategory.TABLE,
+    )
+
     def _render_difference(
         self,
         document,
         difference: Difference,
     ):
+
+        if difference.category in self.DASHBOARD_ONLY_CATEGORIES:
+            return
 
         target = self._choose_target(
             difference

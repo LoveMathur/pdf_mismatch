@@ -1,5 +1,4 @@
 from extractors.unified_extractor import UnifiedExtractor
-#from aligners.logical_aligner import LogicalAligner
 from aligners.robust_logical_aligner import RobustLogicalAligner
 
 from models.logical_aligned_pair import AlignmentType
@@ -8,6 +7,7 @@ from comparators.replace import ReplaceComparator
 from comparators.comparison_engine import ComparisonEngine
 from comparators.insert_delete import InsertDeleteComparator
 from comparators.analyzers.formatting import FormattingComparator
+from comparators.media_comparison_engine import MediaComparisonEngine
 
 
 from renderer.pdf_renderer import PDFRenderer
@@ -36,7 +36,7 @@ def main():
     print("=" * 80)
     print("STEP 2 : Aligning Documents")
     print("=" * 80)
-    #aligner =LogicalAligner()
+
     aligner = RobustLogicalAligner()
 
     aligned_pairs = aligner.align(
@@ -53,14 +53,6 @@ def main():
 
                 left_norm = aligner._normalize_line_text(pair.left.text)
                 right_norm = aligner._normalize_line_text(pair.right.text)
-
-                if left_norm != right_norm:
-
-                    print("=" * 80)
-                    print("ACTUAL FALSE EQUAL")
-                    print(repr(left_norm))
-                    print("----")
-                    print(repr(right_norm))
 
 
     print(f"✓ Total aligned pairs : {len(aligned_pairs)}")
@@ -85,6 +77,20 @@ def main():
 
     differences = engine.compare(
         aligned_pairs
+    )
+
+    #
+    # Images / tables have no LogicalAlignedPair to hook into, so
+    # they're compared directly off the two LogicalDocuments and
+    # merged into the same differences list. PDFRenderer already
+    # knows to report these in the dashboard only, never annotate
+    # them on the PDF.
+    #
+    media_engine = MediaComparisonEngine()
+
+    differences += media_engine.compare(
+        left_document,
+        right_document,
     )
 
     print(f"✓ Total differences : {len(differences)}")

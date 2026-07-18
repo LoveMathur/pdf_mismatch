@@ -64,6 +64,12 @@ compareBtn.addEventListener("click", async () => {
     document.getElementById("numberCount").innerText =
         data.summary.number || 0;
 
+    document.getElementById("imageCount").innerText =
+        data.summary.image || 0;
+
+    document.getElementById("tableCount").innerText =
+        data.summary.table || 0;
+
     const logs = document.getElementById("logs");
 
     logs.innerHTML = "";
@@ -74,7 +80,7 @@ compareBtn.addEventListener("click", async () => {
 
         <div class="log">
 
-            <h4>${log.category.toUpperCase()}</h4>
+            <h4>${log.category.toUpperCase()} ${log.page ? `&middot; Page ${log.page}` : ""}</h4>
 
             <p><strong>Expected:</strong> ${log.expected ?? "-"}</p>
 
